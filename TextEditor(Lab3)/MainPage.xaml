@@ -1,0 +1,62 @@
+﻿<Page
+    x:Class="TextEditor_Lab3_.MainPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:TextEditor_Lab3_"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
+    mc:Ignorable="d"
+    ExitDisplayModeOnAccessKeyInvoked="False"
+    Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+    
+    <Grid Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+
+        
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"></RowDefinition>
+            <RowDefinition Height="14*"></RowDefinition>
+            <RowDefinition Height="*"></RowDefinition>
+        </Grid.RowDefinitions>
+
+
+        <CommandBar Grid.Row="0" OverflowButtonVisibility="Collapsed">
+            <AppBarButton Icon="NewFolder" Label="Ny" Click="NewButton_Click"></AppBarButton>
+            <AppBarButton Icon="OpenFile" Label="Öppna" Click="OpenFileButton_Click"></AppBarButton>
+            <AppBarButton Icon="Save" Label="Save" Click="SaveFileButton_Click"></AppBarButton>
+            <AppBarButton Content="Spara Som" FontSize="16" Click="SaveAsButton_Click"/>
+
+        </CommandBar>
+
+
+        <TextBox x:Name="textBox" 
+                 DragOver="textBox_DragOver" 
+                 BorderThickness="2"
+                 BorderBrush="DarkGray"
+                 AllowDrop="True" 
+                 Drop="textBox_Drop" 
+                 Grid.Row="1"  
+                 TextWrapping="Wrap" 
+                 AcceptsReturn="True" 
+                 TextChanged="TextBox_TextChanged"  
+                 IsHitTestVisible="True" 
+                 IsSpellCheckEnabled="True"
+                 IsTextPredictionEnabled="True"
+                 CanDrag="True"/>
+
+        <Grid Grid.Row="2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"></ColumnDefinition>
+                <ColumnDefinition Width="*"></ColumnDefinition>
+                <ColumnDefinition Width="*"></ColumnDefinition>
+                <ColumnDefinition Width="*"></ColumnDefinition>
+            </Grid.ColumnDefinitions>
+            
+            <TextBlock x:Name="wordCountTextBlock" Text="Antal Ord : " Grid.Column="0"></TextBlock>
+            <TextBlock x:Name="charCountTextBlock" Text ="Antal Tecken : " Grid.Column="1"></TextBlock>
+            <TextBlock x:Name="charNoSpaceCountTextBlock" Text="Antal Tecken Utan Mellanslag : " Grid.Column="2"></TextBlock>
+            <TextBlock x:Name="lineCountTextBlock" Text="Antal Rader : " Grid.Column="3"></TextBlock>
+        </Grid>
+        
+    </Grid>
+</Page>
