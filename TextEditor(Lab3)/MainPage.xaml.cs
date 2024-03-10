@@ -25,14 +25,40 @@ namespace TextEditor_Lab3_
     public sealed partial class MainPage : Page
     {
         private StorageFile currentFile; // Add this field
-        private bool isTextChanged = false;
-        private bool isFileSaved = false;
+        private bool isTextChanged;
+        private bool isFileSaved;
+        private bool isNewFile;
 
         public MainPage()
         {
             this.InitializeComponent();
             ShowOpenOrCreateFileDialog();
         }
+
+
+
+        private void UpdateTitle(string fileName)
+        {
+            string title = "TextEditor - ";
+            if (isNewFile)
+            {
+                title += "Namnlös.txt"; // Standardtitel om ingen fil är öppen
+
+            }
+            else
+            {
+                title += fileName;
+
+            }
+
+            if (isTextChanged)
+            {
+                title += "*";
+            }
+
+            ApplicationView.GetForCurrentView().Title = title;
+        }
+
 
         //All Buttons 
         private void OpenFileButton_Click(object sender, RoutedEventArgs e) => OpenFile();
@@ -41,6 +67,21 @@ namespace TextEditor_Lab3_
             if (isTextChanged)
             {
                 AskToSaveFile();
+                textBox.Text = "";
+                isFileSaved = true;
+                isTextChanged = false;
+                isNewFile = true;
+                UpdateTitle(null);
+
+            }
+            else
+            {
+                textBox.Text = "";
+                isFileSaved = true;
+                isTextChanged = false;
+                isNewFile = true;
+                UpdateTitle(null);
+
             }
 
         }
@@ -51,22 +92,23 @@ namespace TextEditor_Lab3_
         private void CreateNewFile()
         {
             textBox.Text = "";
-            UpdateTitle();
+            isFileSaved = true;
+            isTextChanged = false;
+            isNewFile = true;
         }
         private async void SaveFile()
         {
-            if (!isFileSaved)
-            {
-                SaveAsFile();
-            }
-            else if (currentFile != null)
+            if (currentFile != null) // Kontrollera om en fil är öppen
             {
                 string textToSave = textBox.Text;
                 await Windows.Storage.FileIO.WriteTextAsync(currentFile, textToSave);
                 isTextChanged = false;
-                ShowMessageDialog("File saved successfully!");
-                UpdateTitle(); // Call the UpdateTitle method
-
+                isNewFile = false;
+                UpdateTitle(currentFile.Name); // Uppdatera titeln när en fil öppnas med filnamnet
+            }
+            else
+            {
+                SaveAsFile(); // Om ingen fil är öppen, använd SaveAsFile-metoden
             }
         }
         private async void SaveAsFile()
@@ -82,7 +124,24 @@ namespace TextEditor_Lab3_
                 isTextChanged = false;
                 isFileSaved = true;
                 currentFile = result; // Update currentFile with the new file
-                UpdateTitle(); // Call the UpdateTitle method
+                isNewFile = false;
+                UpdateTitle(currentFile.Name); // Uppdatera titeln när en fil öppnas med filnamnet
+
+            }
+        }
+        private async void SaveFileNewFile()
+        {
+            var fileSavePicker = new FileSavePicker();
+            fileSavePicker.FileTypeChoices.Add("Plain Text", new List<string>() { ".txt" });
+            var result = await fileSavePicker.PickSaveFileAsync();
+            if (result != null)
+            {
+                string textToSave = textBox.Text;
+                await Windows.Storage.FileIO.WriteTextAsync(result, textToSave);
+                ShowMessageDialog("File saved successfully!");
+                isTextChanged = false;
+                isFileSaved = true;
+                currentFile = result; // Update currentFile with the new file
             }
         }
         private async void OpenFile()
@@ -90,7 +149,7 @@ namespace TextEditor_Lab3_
 
             if (isTextChanged)
             {
-                AskToSaveFile();
+                AskToSaveFileOnOpenFile();
             }
             var fileOpenPicker = new FileOpenPicker();
             fileOpenPicker.FileTypeFilter.Add(".txt");
@@ -102,11 +161,16 @@ namespace TextEditor_Lab3_
                 textBox.Text = text;
                 currentFile = result; // Set the currentFile field
                 isTextChanged = false;
-                UpdateTitle(); // Call the UpdateTitle method
-
+                isNewFile = false;
+                UpdateTitle(currentFile.Name); // Uppdatera titeln när en fil öppnas med filnamnet
+                SaveFile();
 
             }
+
+
         }
+
+
 
         // Dialogs 
         private async void ShowOpenOrCreateFileDialog()
@@ -116,6 +180,24 @@ namespace TextEditor_Lab3_
             dialog.Commands.Add(new UICommand("Skapa ny", new UICommandInvokedHandler((command) => CreateNewFile())));
             await dialog.ShowAsync();
         }
+
+        private async void AskToSaveFileOnOpenFile()
+        {
+            var dialog = new MessageDialog("Do you want to save this file?");
+            dialog.Commands.Add(new UICommand("Yes"));
+            dialog.Commands.Add(new UICommand("No"));
+
+            IUICommand result = await dialog.ShowAsync();
+
+            // Kontrollera vilken knapp användaren har klickat på
+            if (result == dialog.Commands[0])
+            {
+                SaveAsFile();
+            }
+
+
+        }
+
         private async void AskToSaveFile()
         {
             var dialog = new MessageDialog("Do you want to save this file?");
@@ -128,12 +210,7 @@ namespace TextEditor_Lab3_
             // Kontrollera vilken knapp användaren har klickat på
             if (result == dialog.Commands[0])
             {
-                SaveAsFile();
-                ResetTextBox();
-            }
-            else if (result == dialog.Commands[1])
-            {
-                ResetTextBox();
+                SaveFileNewFile();
             }
         }
         private async void ShowMessageDialog(string message)
@@ -148,9 +225,16 @@ namespace TextEditor_Lab3_
             // Hämta texten från TextBox
             string text = textBox.Text;
             isTextChanged = true;
+            isFileSaved = false;
 
-            UpdateTitle();
-
+            if (currentFile != null)
+            {
+                UpdateTitle(currentFile.Name); // Uppdatera titeln när en fil öppnas med filnamnet
+            }
+            else
+            {
+                UpdateTitle(null); // Uppdatera titeln med null om ingen fil är öppen
+            }
             // Uppdatera antal ord
             int wordCount = CountWords(text);
             wordCountTextBlock.Text = "Antal Ord : " + wordCount;
@@ -166,11 +250,12 @@ namespace TextEditor_Lab3_
             // Uppdatera antal rader
             int lineCount = CountLines(text);
             lineCountTextBlock.Text = "Antal Rader : " + lineCount;
+
         }
         private int CountWords(string text)
         {
             // Räkna antal ord genom att splitta texten på mellanslag och räkna arrayens längd
-            string[] words = text.Split(new[] {' ','\r','\n','\t'}, StringSplitOptions.RemoveEmptyEntries);
+            string[] words = text.Split(new[] { ' ', '\r', '\n', '\t' }, StringSplitOptions.RemoveEmptyEntries);
             return words.Length;
         }
         private int CountLines(string text)
@@ -185,7 +270,7 @@ namespace TextEditor_Lab3_
                 return lineCount;
             }
         }
-
+       
         //Drag & Drop
         private void textBox_DragOver(object sender, DragEventArgs e)
         {
@@ -233,11 +318,37 @@ namespace TextEditor_Lab3_
                         {
                             if (isTextChanged)
                             {
-                                //OpenFileDaD(storageFile);
+                                var dialog = new MessageDialog("Do you want to save this file?");
+                                dialog.Commands.Add(new UICommand("Yes"));
+                                dialog.Commands.Add(new UICommand("No"));
+                                dialog.Commands.Add(new UICommand("Cancel"));
+
+                                IUICommand result = await dialog.ShowAsync();
+
+                                // Kontrollera vilken knapp användaren har klickat på
+                                if (result == dialog.Commands[0])
+                                {
+                                    SaveAsFile();
+                                    CreateNewFile();
+                                    isFileSaved = true;
+                                    string textToAdd = await FileIO.ReadTextAsync(storageFile);
+                                    textBox.Text += textToAdd;
+                                    isNewFile = false;
+                                    UpdateTitle(storageFile.Name);
+                                }
+                                else if (result == dialog.Commands[1])
+                                {
+                                    CreateNewFile();
+                                    isFileSaved = true;
+                                    string textToAdd = await FileIO.ReadTextAsync(storageFile);
+                                    textBox.Text += textToAdd;
+                                    isNewFile = false;
+                                    UpdateTitle(storageFile.Name);
+                                }
                             }
                             else
                             {
-                               // OpenFileDaD(storageFile);
+                                CreateNewFile();
                             }
                         }
 
@@ -246,7 +357,6 @@ namespace TextEditor_Lab3_
                         isFileSaved = true;
 
                         // Update title
-                        UpdateTitle();
                     }
                     else
                     {
@@ -257,42 +367,6 @@ namespace TextEditor_Lab3_
             }
         }
 
-        //Others
-        private void ResetTextBox()
-        {
-            textBox.Text = "";
-            isFileSaved = false;
-            isTextChanged = false;
-        }
-        private void UpdateTitle()
-        {
-            string fileName;
-
-            if (currentFile != null)
-            {
-                if (!isTextChanged)
-                {
-                    fileName = currentFile.Name;
-                }
-
-                else
-                {
-                    fileName = currentFile.Name;
-                    fileName = "*" + fileName;
-                }
-            }
-            else
-            {
-                fileName = "namnlös.txt";
-
-                if (isTextChanged)
-                {
-                    fileName = "*" + fileName;
-                }
-            }
-
-            ApplicationView.GetForCurrentView().Title = fileName;
-        }
 
     }
 }
